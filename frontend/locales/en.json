@@ -333,6 +333,21 @@
       }
     },
     "export": {
+      "gist": {
+        "sidebarEntry": "GitHub Gist",
+        "title": "Export to GitHub Gist",
+        "createButton": "Create Gist",
+        "headingAuthentication": "Authentication",
+        "headingSettings": "Gist settings",
+        "fieldToken": "Access token for GitHub",
+        "infoToken": "You need a personal access token with the Gists account permission. You can create one in your GitHub settings here:",
+        "fieldDescription": "Description",
+        "fieldPublic": "Make Gist public?",
+        "notificationSuccessTitle": "GitHub Gist successfully created",
+        "notificationSuccessMessage": "The note has been exported to GitHub Gist.",
+        "notificationSuccessButton": "Open Gist",
+        "notificationErrorTitle": "Error while creating GitHub Gist: {{errorMessage}}"
+      },
       "rawHtml": "Raw HTML",
       "markdown-file": "Markdown file"
     },
