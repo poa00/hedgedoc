@@ -12,7 +12,7 @@ import { UserAvatar } from './user-avatar'
 jest.mock('@dicebear/identicon', () => null)
 jest.mock('@dicebear/core', () => ({
   createAvatar: jest.fn(() => ({
-    toDataUriSync: jest.fn(() => 'data:image/x-other,identicon-mock')
+    toDataUri: jest.fn(() => 'data:image/x-other,identicon-mock')
   }))
 }))
 
@@ -57,6 +57,18 @@ describe('UserAvatar', () => {
 
   it('uses identicon when empty photoUrl is given', () => {
     const view = render(<UserAvatar displayName={'test'} photoUrl={''} />)
+    expect(view.container).toMatchSnapshot()
+  })
+
+  it('uses custom photo component if provided', () => {
+    const view = render(<UserAvatar displayName={'test'} photoComponent={<div>Custom Photo</div>} />)
+    expect(view.container).toMatchSnapshot()
+  })
+
+  it('uses custom photo component preferred over photoUrl', () => {
+    const view = render(
+      <UserAvatar displayName={'test'} photoComponent={<div>Custom Photo</div>} photoUrl={user.photoUrl} />
+    )
     expect(view.container).toMatchSnapshot()
   })
 })

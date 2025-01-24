@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2024 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -199,18 +199,46 @@ describe('Me', () => {
     expect(response1.body).toHaveLength(0);
 
     const testImage = await fs.readFile('test/public-api/fixtures/test.png');
-    const imageUrls = [];
-    imageUrls.push(
-      (await testSetup.mediaService.saveFile(testImage, user, note1)).fileUrl,
+    const imageIds = [];
+    imageIds.push(
+      (
+        await testSetup.mediaService.saveFile(
+          'test.png',
+          testImage,
+          user,
+          note1,
+        )
+      ).uuid,
     );
-    imageUrls.push(
-      (await testSetup.mediaService.saveFile(testImage, user, note1)).fileUrl,
+    imageIds.push(
+      (
+        await testSetup.mediaService.saveFile(
+          'test.png',
+          testImage,
+          user,
+          note1,
+        )
+      ).uuid,
     );
-    imageUrls.push(
-      (await testSetup.mediaService.saveFile(testImage, user, note2)).fileUrl,
+    imageIds.push(
+      (
+        await testSetup.mediaService.saveFile(
+          'test.png',
+          testImage,
+          user,
+          note2,
+        )
+      ).uuid,
     );
-    imageUrls.push(
-      (await testSetup.mediaService.saveFile(testImage, user, note2)).fileUrl,
+    imageIds.push(
+      (
+        await testSetup.mediaService.saveFile(
+          'test.png',
+          testImage,
+          user,
+          note2,
+        )
+      ).uuid,
     );
 
     const response = await request(httpServer)
@@ -218,14 +246,13 @@ describe('Me', () => {
       .expect('Content-Type', /json/)
       .expect(200);
     expect(response.body).toHaveLength(4);
-    expect(imageUrls).toContain(response.body[0].url);
-    expect(imageUrls).toContain(response.body[1].url);
-    expect(imageUrls).toContain(response.body[2].url);
-    expect(imageUrls).toContain(response.body[3].url);
-    for (const fileUrl of imageUrls) {
-      const fileName = fileUrl.replace('/uploads/', '');
+    expect(imageIds).toContain(response.body[0].uuid);
+    expect(imageIds).toContain(response.body[1].uuid);
+    expect(imageIds).toContain(response.body[2].uuid);
+    expect(imageIds).toContain(response.body[3].uuid);
+    for (const imageId of imageIds) {
       // delete the file afterwards
-      await fs.unlink(join(uploadPath, fileName));
+      await fs.unlink(join(uploadPath, imageId + '.png'));
     }
     await fs.rm(uploadPath, { recursive: true });
   });

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2024 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -7,19 +7,25 @@ import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { createPatch } from 'diff';
 import { Mock } from 'ts-mockery';
-import { Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 
-import { AuthToken } from '../auth/auth-token.entity';
+import { ApiToken } from '../api-token/api-token.entity';
+import { Identity } from '../auth/identity.entity';
 import { Author } from '../authors/author.entity';
 import appConfigMock from '../config/mock/app.config.mock';
 import authConfigMock from '../config/mock/auth.config.mock';
 import databaseConfigMock from '../config/mock/database.config.mock';
 import noteConfigMock from '../config/mock/note.config.mock';
+import {
+  createDefaultMockNoteConfig,
+  registerNoteConfig,
+} from '../config/mock/note.config.mock';
+import { NoteConfig } from '../config/note.config';
 import { NotInDBError } from '../errors/errors';
 import { eventModuleConfig } from '../events';
 import { Group } from '../groups/group.entity';
-import { Identity } from '../identity/identity.entity';
 import { LoggerModule } from '../logger/logger.module';
 import { Alias } from '../notes/alias.entity';
 import { Note } from '../notes/note.entity';
@@ -37,14 +43,31 @@ import { RevisionsService } from './revisions.service';
 describe('RevisionsService', () => {
   let service: RevisionsService;
   let revisionRepo: Repository<Revision>;
+  let noteRepo: Repository<Note>;
+  const noteConfig: NoteConfig = createDefaultMockNoteConfig();
 
   beforeEach(async () => {
+    noteRepo = new Repository<Note>(
+      '',
+      new EntityManager(
+        new DataSource({
+          type: 'sqlite',
+          database: ':memory:',
+        }),
+      ),
+      undefined,
+    );
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RevisionsService,
         EditService,
         {
           provide: getRepositoryToken(Revision),
+          useClass: Repository,
+        },
+        {
+          provide: getRepositoryToken(Note),
           useClass: Repository,
         },
       ],
@@ -58,6 +81,7 @@ describe('RevisionsService', () => {
             databaseConfigMock,
             authConfigMock,
             noteConfigMock,
+            registerNoteConfig(noteConfig),
           ],
         }),
         EventEmitterModule.forRoot(eventModuleConfig),
@@ -67,12 +91,12 @@ describe('RevisionsService', () => {
       .useValue({})
       .overrideProvider(getRepositoryToken(User))
       .useValue({})
-      .overrideProvider(getRepositoryToken(AuthToken))
+      .overrideProvider(getRepositoryToken(ApiToken))
       .useValue({})
       .overrideProvider(getRepositoryToken(Identity))
       .useValue({})
       .overrideProvider(getRepositoryToken(Note))
-      .useValue({})
+      .useValue(noteRepo)
       .overrideProvider(getRepositoryToken(Revision))
       .useClass(Repository)
       .overrideProvider(getRepositoryToken(Tag))
@@ -95,6 +119,7 @@ describe('RevisionsService', () => {
     revisionRepo = module.get<Repository<Revision>>(
       getRepositoryToken(Revision),
     );
+    noteRepo = module.get<Repository<Note>>(getRepositoryToken(Note));
   });
 
   it('should be defined', () => {
@@ -121,7 +146,7 @@ describe('RevisionsService', () => {
     let note: Note;
 
     beforeEach(() => {
-      note = Mock.of<Note>({});
+      note = Mock.of<Note>({ publicId: 'test-note', id: 1 });
       revisions = [];
 
       jest
@@ -141,14 +166,27 @@ describe('RevisionsService', () => {
     });
 
     it('purges the revision history', async () => {
-      const revision1 = Mock.of<Revision>({ id: 1 });
-      const revision2 = Mock.of<Revision>({ id: 2 });
-      const revision3 = Mock.of<Revision>({ id: 3 });
+      const revision1 = Mock.of<Revision>({
+        id: 1,
+        note: Promise.resolve(note),
+      });
+      const revision2 = Mock.of<Revision>({
+        id: 2,
+        note: Promise.resolve(note),
+      });
+      const revision3 = Mock.of<Revision>({
+        id: 3,
+        note: Promise.resolve(note),
+        content:
+          '---\ntitle: new title\ndescription: new description\ntags: [ "tag1" ]\n---\nnew content\n',
+      });
       revisions = [revision1, revision2, revision3];
       note.revisions = Promise.resolve(revisions);
 
       jest.spyOn(revisionRepo, 'find').mockResolvedValueOnce(revisions);
       jest.spyOn(service, 'getLatestRevision').mockResolvedValueOnce(revision3);
+
+      jest.spyOn(revisionRepo, 'save').mockResolvedValue(Mock.of<Revision>());
 
       // expected to return all the purged revisions
       expect(await service.purgeRevisions(note)).toStrictEqual([
@@ -156,8 +194,8 @@ describe('RevisionsService', () => {
         revision2,
       ]);
 
-      // expected to have only the latest revision
       expect(revisions).toStrictEqual([revision3]);
+      expect(revision3.patch).toMatchSnapshot();
     });
     it('has no effect on revision history when a single revision is present', async () => {
       const revision1 = Mock.of<Revision>({ id: 1 });
@@ -227,23 +265,7 @@ describe('RevisionsService', () => {
           }),
         ]),
       });
-      expect(await service.toRevisionMetadataDto(revision))
-        .toMatchInlineSnapshot(`
-        {
-          "anonymousAuthorCount": 0,
-          "authorUsernames": [
-            "mockusername",
-          ],
-          "createdAt": 2020-05-20T09:58:00.000Z,
-          "description": "mockDescription",
-          "id": 3246,
-          "length": 1854,
-          "tags": [
-            "mockTag",
-          ],
-          "title": "mockTitle",
-        }
-      `);
+      expect(await service.toRevisionMetadataDto(revision)).toMatchSnapshot();
     });
   });
 
@@ -276,33 +298,7 @@ describe('RevisionsService', () => {
           }),
         ]),
       });
-      expect(await service.toRevisionDto(revision)).toMatchInlineSnapshot(`
-        {
-          "anonymousAuthorCount": 0,
-          "authorUsernames": [
-            "mockusername",
-          ],
-          "content": "mockContent",
-          "createdAt": 2020-05-20T09:58:00.000Z,
-          "description": "mockDescription",
-          "edits": [
-            {
-              "createdAt": 2020-03-04T22:32:00.000Z,
-              "endPos": 93,
-              "startPos": 34,
-              "updatedAt": 2021-02-10T12:23:00.000Z,
-              "username": "mockusername",
-            },
-          ],
-          "id": 3246,
-          "length": 1854,
-          "patch": "mockPatch",
-          "tags": [
-            "mockTag",
-          ],
-          "title": "mockTitle",
-        }
-      `);
+      expect(await service.toRevisionDto(revision)).toMatchSnapshot();
     });
   });
 
@@ -324,31 +320,11 @@ describe('RevisionsService', () => {
       const createdRevision = await service.createRevision(note, newContent);
       expect(createdRevision).not.toBeUndefined();
       expect(createdRevision?.content).toBe(newContent);
-      await expect(createdRevision?.tags).resolves.toMatchInlineSnapshot(`
-        [
-          Tag {
-            "name": "tag1",
-          },
-        ]
-      `);
+      await expect(createdRevision?.tags).resolves.toMatchSnapshot();
       expect(createdRevision?.title).toBe('new title');
       expect(createdRevision?.description).toBe('new description');
       await expect(createdRevision?.note).resolves.toBe(note);
-      expect(createdRevision?.patch).toMatchInlineSnapshot(`
-        "Index: test-note
-        ===================================================================
-        --- test-note
-        +++ test-note
-        @@ -1,1 +1,6 @@
-        -old content
-        +---
-        +title: new title
-        +description: new description
-        +tags: [ "tag1" ]
-        +---
-        +new content
-        "
-      `);
+      expect(createdRevision?.patch).toMatchSnapshot();
     });
 
     it("won't create a revision if content is unchanged", async () => {
@@ -408,6 +384,165 @@ describe('RevisionsService', () => {
         yjsState,
       );
       expect(repoSaveSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('auto remove old revisions', () => {
+    beforeEach(() => {
+      jest.spyOn(service, 'removeOldRevisions');
+    });
+
+    it('handleCron should call removeOldRevisions', async () => {
+      await service.handleRevisionCleanup();
+      expect(service.removeOldRevisions).toHaveBeenCalledTimes(1);
+    });
+
+    it('handleTimeout should call removeOldRevisions', async () => {
+      await service.handleRevisionCleanupTimeout();
+      expect(service.removeOldRevisions).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('removeOldRevisions', () => {
+    let note: Note;
+    let notes: Note[];
+    let revisions: Revision[];
+    let oldRevisions: Revision[];
+    const retentionDays = 30;
+
+    beforeEach(() => {
+      noteConfig.revisionRetentionDays = retentionDays;
+
+      note = Mock.of<Note>({ publicId: 'test-note', id: 1 });
+      notes = [note];
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('remove all revisions except latest revision', async () => {
+      const date1 = new Date();
+      const date2 = new Date();
+      const date3 = new Date();
+      date1.setDate(date1.getDate() - retentionDays - 2);
+      date2.setDate(date2.getDate() - retentionDays - 1);
+
+      const revision1 = Mock.of<Revision>({
+        id: 1,
+        createdAt: date1,
+        note: Promise.resolve(note),
+      });
+      const revision2 = Mock.of<Revision>({
+        id: 2,
+        createdAt: date2,
+        note: Promise.resolve(note),
+        content: 'old content\n',
+      });
+      const revision3 = Mock.of<Revision>({
+        id: 3,
+        createdAt: date3,
+        note: Promise.resolve(note),
+        content:
+          '---\ntitle: new title\ndescription: new description\ntags: [ "tag1" ]\n---\nnew content\n',
+      });
+      revision3.patch = createPatch(
+        note.publicId,
+        revision2.content,
+        revision3.content,
+      );
+
+      revisions = [revision1, revision2, revision3];
+      oldRevisions = [revision1, revision2];
+
+      jest.spyOn(noteRepo, 'find').mockResolvedValueOnce(notes);
+      jest.spyOn(revisionRepo, 'find').mockResolvedValueOnce(revisions);
+      jest
+        .spyOn(revisionRepo, 'remove')
+        .mockImplementationOnce(async (entry, _) => {
+          expect(entry).toEqual(oldRevisions);
+          return entry;
+        });
+      jest.spyOn(revisionRepo, 'save').mockResolvedValue(revision3);
+
+      await service.removeOldRevisions();
+      expect(revision3.patch).toMatchSnapshot();
+    });
+
+    it('remove a part of old revisions', async () => {
+      const date1 = new Date();
+      const date2 = new Date();
+      const date3 = new Date();
+      date1.setDate(date1.getDate() - retentionDays);
+      date2.setDate(date2.getDate() - retentionDays + 1);
+
+      const revision1 = Mock.of<Revision>({
+        id: 1,
+        createdAt: date1,
+        note: Promise.resolve(note),
+        content: 'old content\n',
+      });
+      const revision2 = Mock.of<Revision>({
+        id: 2,
+        createdAt: date2,
+        note: Promise.resolve(note),
+        content:
+          '---\ntitle: new title\ndescription: new description\ntags: [ "tag1" ]\n---\nnew content\n',
+      });
+      const revision3 = Mock.of<Revision>({
+        id: 3,
+        createdAt: date3,
+        note: Promise.resolve(note),
+      });
+      revision2.patch = createPatch(
+        note.publicId,
+        revision1.content,
+        revision2.content,
+      );
+
+      revisions = [revision1, revision2, revision3];
+      oldRevisions = [revision1];
+
+      jest.spyOn(noteRepo, 'find').mockResolvedValueOnce(notes);
+      jest.spyOn(revisionRepo, 'find').mockResolvedValueOnce(revisions);
+      jest
+        .spyOn(revisionRepo, 'remove')
+        .mockImplementationOnce(async (entry, _) => {
+          expect(entry).toEqual(oldRevisions);
+          return entry;
+        });
+      jest.spyOn(revisionRepo, 'save').mockResolvedValue(revision2);
+
+      await service.removeOldRevisions();
+      expect(revision2.patch).toMatchSnapshot();
+    });
+
+    it('do nothing when only one revision', async () => {
+      const date = new Date();
+      date.setDate(date.getDate() - retentionDays * 2);
+
+      const revision1 = Mock.of<Revision>({
+        id: 1,
+        createdAt: date,
+        note: Promise.resolve(note),
+      });
+      revisions = [revision1];
+      oldRevisions = [];
+
+      jest.spyOn(noteRepo, 'find').mockResolvedValueOnce(notes);
+      jest.spyOn(revisionRepo, 'find').mockResolvedValueOnce(revisions);
+      const spyOnRemove = jest.spyOn(revisionRepo, 'remove');
+
+      await service.removeOldRevisions();
+      expect(spyOnRemove).toHaveBeenCalledTimes(0);
+    });
+
+    it('do nothing when retention days config is zero', async () => {
+      noteConfig.revisionRetentionDays = 0;
+      const spyOnRemove = jest.spyOn(revisionRepo, 'remove');
+
+      await service.removeOldRevisions();
+      expect(spyOnRemove).toHaveBeenCalledTimes(0);
     });
   });
 });

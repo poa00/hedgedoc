@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: CC-BY-SA-4.0
 
 # BASE
-FROM docker.io/node:20-alpine@sha256:2f46fd49c767554c089a5eb219115313b72748d8f62f5eccb58ef52bc36db4ad AS base
+FROM docker.io/node:20-alpine@sha256:d20da4a7c62a5ef7a3ca2526ebb0912e8c9226a870e0167b4416eb4d3bbda27e AS base
 RUN apk add --no-cache tini
 ENTRYPOINT ["tini", "--"]
 
@@ -26,7 +26,7 @@ ARG TURBO_TEAM
 ARG TURBO_API
 ARG TURBO_TOKEN
 
-RUN yarn build --filter=frontend --no-cache --no-daemon
+RUN yarn build --filter=@hedgedoc/frontend --no-cache --no-daemon
 
 # RUNNER
 FROM base
@@ -36,7 +36,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 LABEL org.opencontainers.image.title='HedgeDoc production frontend image'
 LABEL org.opencontainers.image.url='https://hedgedoc.org'
 LABEL org.opencontainers.image.source='https://github.com/hedgedoc/hedgedoc'
-LABEL org.opencontainers.image.documentation='https://github.com/hedgedoc/hedgedoc/blob/develop/docs/content/dev/docker.md'
+LABEL org.opencontainers.image.documentation='https://github.com/hedgedoc/hedgedoc/blob/develop/docs/content/how-to/develop/docker.md'
 LABEL org.opencontainers.image.licenses='AGPL-3.0'
 
 WORKDIR /usr/src/app

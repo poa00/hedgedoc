@@ -1,16 +1,16 @@
 /*
- * SPDX-FileCopyrightText: 2021 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2024 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import { DataSource } from 'typeorm';
 
-import { AuthToken } from './auth/auth-token.entity';
+import { ApiToken } from './api-token/api-token.entity';
+import { Identity } from './auth/identity.entity';
+import { ProviderType } from './auth/provider-type.enum';
 import { Author } from './authors/author.entity';
 import { Group } from './groups/group.entity';
 import { HistoryEntry } from './history/history-entry.entity';
-import { Identity } from './identity/identity.entity';
-import { ProviderType } from './identity/provider-type.enum';
 import { MediaUpload } from './media/media-upload.entity';
 import { Alias } from './notes/alias.entity';
 import { Note } from './notes/note.entity';
@@ -40,7 +40,7 @@ const dataSource = new DataSource({
     HistoryEntry,
     MediaUpload,
     Tag,
-    AuthToken,
+    ApiToken,
     Identity,
     Author,
     Session,
@@ -69,7 +69,7 @@ dataSource
         Author.create(1),
       )) as Author;
       const user = (await dataSource.manager.save(users[i])) as User;
-      const identity = Identity.create(user, ProviderType.LOCAL, false);
+      const identity = Identity.create(user, ProviderType.LOCAL, null);
       identity.passwordHash = await hashPassword(password);
       dataSource.manager.create(Identity, identity);
       author.user = dataSource.manager.save(user);

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2024 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -13,11 +13,11 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-import { AuthToken } from '../auth/auth-token.entity';
+import { ApiToken } from '../api-token/api-token.entity';
+import { Identity } from '../auth/identity.entity';
 import { Author } from '../authors/author.entity';
 import { Group } from '../groups/group.entity';
 import { HistoryEntry } from '../history/history-entry.entity';
-import { Identity } from '../identity/identity.entity';
 import { MediaUpload } from '../media/media-upload.entity';
 import { Note } from '../notes/note.entity';
 import { Username } from '../utils/username';
@@ -56,8 +56,8 @@ export class User {
   @OneToMany((_) => Note, (note) => note.owner)
   ownedNotes: Promise<Note[]>;
 
-  @OneToMany((_) => AuthToken, (authToken) => authToken.user)
-  authTokens: Promise<AuthToken[]>;
+  @OneToMany((_) => ApiToken, (apiToken) => apiToken.user)
+  apiTokens: Promise<ApiToken[]>;
 
   @OneToMany((_) => Identity, (identity) => identity.user)
   identities: Promise<Identity[]>;
@@ -80,14 +80,16 @@ export class User {
   public static create(
     username: Username,
     displayName: string,
+    email?: string,
+    photoUrl?: string,
   ): Omit<User, 'id' | 'createdAt' | 'updatedAt'> {
     const newUser = new User();
     newUser.username = username;
     newUser.displayName = displayName;
-    newUser.photo = null;
-    newUser.email = null;
+    newUser.photo = photoUrl ?? null;
+    newUser.email = email ?? null;
     newUser.ownedNotes = Promise.resolve([]);
-    newUser.authTokens = Promise.resolve([]);
+    newUser.apiTokens = Promise.resolve([]);
     newUser.identities = Promise.resolve([]);
     newUser.groups = Promise.resolve([]);
     newUser.historyEntries = Promise.resolve([]);

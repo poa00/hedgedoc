@@ -25,19 +25,19 @@ in your `docker-compose.yml`:
 ??? abstract "docker-compose.yml"
     ```yaml
     backend:
-      image: ghcr.io/hedgedoc/hedgedoc/backend:2.0.0-alpha.2
+      image: ghcr.io/hedgedoc/hedgedoc/backend:2.0.0-alpha.3
       volumes:
         - $PWD/.env:/usr/src/app/backend/.env
         - hedgedoc_uploads:/usr/src/app/backend/uploads
       labels:
         traefik.enable: "true"
-        traefik.http.routers.hedgedoc_2_backend.rule: "Host(`md.example.com`) && PathPrefix(`/realtime`, `/api`, `/public`)"
+        traefik.http.routers.hedgedoc_2_backend.rule: "Host(`md.example.com`) && (PathPrefix(`/realtime`) || PathPrefix(`/api`) || PathPrefix(`/public`) || PathPrefix(`/uploads`) || PathPrefix(`/media`))"
         traefik.http.routers.hedgedoc_2_backend.tls: "true"
         traefik.http.routers.hedgedoc_2_backend.tls.certresolver: "letsencrypt"
         traefik.http.services.hedgedoc_2_backend.loadbalancer.server.port: "3000"
         traefik.http.services.hedgedoc_2_backend.loadbalancer.server.scheme: "http"
     frontend:
-      image: ghcr.io/hedgedoc/hedgedoc/frontend:2.0.0-alpha.2
+      image: ghcr.io/hedgedoc/hedgedoc/frontend:2.0.0-alpha.3
       environment:
         HD_BASE_URL: "${HD_BASE_URL}"
       labels:
@@ -79,14 +79,14 @@ you need to add the `ports` entry for both `backend` and `frontend` as following
 ??? abstract "docker-compose.yml"
     ```yaml
     backend:
-      image: ghcr.io/hedgedoc/hedgedoc/backend:2.0.0-alpha.2
+      image: ghcr.io/hedgedoc/hedgedoc/backend:2.0.0-alpha.3
       volumes:
         - $PWD/.env:/usr/src/app/backend/.env
         - hedgedoc_uploads:/usr/src/app/backend/uploads
       ports:
         - "3000:3000"
     frontend:
-      image: ghcr.io/hedgedoc/hedgedoc/frontend:2.0.0-alpha.2
+      image: ghcr.io/hedgedoc/hedgedoc/frontend:2.0.0-alpha.3
       environment:
         HD_BASE_URL: "${HD_BASE_URL}"
       ports:
@@ -113,7 +113,7 @@ Here is an example configuration for [nginx][nginx].
     server {
             server_name md.example.com;
 
-            location ~ ^/(api|public|uploads|apidoc)/ {
+            location ~ ^/(api|public|uploads|media)/ {
                     proxy_pass http://127.0.0.1:3000;
                     proxy_set_header X-Forwarded-Host $host;
                     proxy_set_header X-Real-IP $remote_addr;
@@ -168,13 +168,13 @@ Here is an example config snippet for [Apache][apache]:
       RewriteRule /(.*)  ws://127.0.0.1:3000/$1          [P,L]
     
       ProxyPass /api http://127.0.0.1:3000/
-      ProxyPass /apidoc http://127.0.0.1:3000/
       ProxyPass /public http://127.0.0.1:3000/
       ProxyPass /realtime http://127.0.0.1:3000/
       
       ProxyPassReverse /api http://127.0.0.1:3000/
-      ProxyPassReverse /apidoc http://127.0.0.1:3000/
       ProxyPassReverse /public http://127.0.0.1:3000/
+      ProxyPassReverse /uploads http://127.0.0.1:3000/
+      ProxyPassReverse /media http://127.0.0.1:3000/
       ProxyPassReverse /realtime http://127.0.0.1:3000/
       
       ProxyPass / http://127.0.0.1:3001/
@@ -202,7 +202,7 @@ Here is a list of things your reverse proxy needs to do to let HedgeDoc work:
 - Passing `/api/*` to <http://localhost:3000>
 - Passing `/public/*` to <http://localhost:3000>
 - Passing `/uploads/*` to <http://localhost:3000>
-- Passing `/apidoc/*` to <http://localhost:3000>
+- Passing `/media/*` to <http://localhost:3000>
 - Passing `/*` to <http://localhost:3001>
 - Set the `X-Forwarded-Proto` header 
 

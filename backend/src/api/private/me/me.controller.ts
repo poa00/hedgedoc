@@ -1,12 +1,12 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2024 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import { Body, Controller, Delete, Get, Post, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
 
-import { SessionGuard } from '../../../identity/session.guard';
+import { SessionGuard } from '../../../auth/session.guard';
 import { ConsoleLoggerService } from '../../../logger/console-logger.service';
 import { MediaUploadDto } from '../../../media/media-upload.dto';
 import { MediaService } from '../../../media/media.service';
@@ -75,6 +75,11 @@ export class MeController {
     @RequestUser() user: User,
     @Body('displayName') newDisplayName: string,
   ): Promise<void> {
-    await this.userService.changeDisplayName(user, newDisplayName);
+    await this.userService.updateUser(
+      user,
+      newDisplayName,
+      undefined,
+      undefined,
+    );
   }
 }

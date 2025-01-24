@@ -169,6 +169,10 @@
       "successTitle": "Password changed",
       "successText": "Your password has been changed successfully."
     },
+    "selectProfilePicture": {
+      "title": "Select profile picture",
+      "info": "Your profile picture is publicly visible. Depending on your auth provider, you might have more or less choices here."
+    },
     "changeDisplayNameFailed": "There was an error changing your display name.",
     "accountManagement": "Account management",
     "deleteUser": "Delete user",
@@ -224,10 +228,11 @@
         "withDescription": "Uploading file {{fileName}} - {{description}}"
       },
       "dropImage": "Drop Image to insert",
-      "failed": "Error while uploading {{fileName}}"
+      "failed": "Error while uploading {{fileName}}",
+      "failed_size_too_large": "Error when uploading {{fileName}}.\nFile size exceeds the allowed limit"
     },
     "untitledNote": "Untitled",
-    "placeholder": "← Start by entering a title here\n===\nVisit {{host}}features if you don't know what to do.\nHappy hacking :)",
+    "placeholder": "← Start by entering a title here\n===\nVisit {{host}}cheatsheet if you don't know what to do.\nLet the ideas grow :)",
     "infoToc": "Structure your note with headings to see a table-of-contents here.",
     "onlineStatus": {
       "online": "Online",
@@ -333,8 +338,40 @@
       }
     },
     "export": {
+      "common": {
+        "title": "Export to {{service}}",
+        "createButton": "Create {{shortName}}",
+        "headingAuthentication": "Authentication",
+        "headingSettings": "Export settings",
+        "fieldToken": "Access token",
+        "fieldDescription": "Description",
+        "notificationSuccessTitle": "{{shortName}} successfully created",
+        "notificationSuccessMessage": "The note has been exported to {{service}}.",
+        "notificationSuccessButton": "Open {{shortName}}",
+        "notificationErrorTitle": "Error while creating {{shortName}}: {{errorMessage}}"
+      },
+      "gist": {
+        "service": "GitHub Gist",
+        "shortName": "Gist",
+        "infoToken": "You need a personal access token with the Gists account permission. You can create one in your GitHub settings here:",
+        "fieldPublic": "Make Gist public?"
+      },
+      "gitlab": {
+        "service": "GitLab snippet",
+        "shortName": "Snippet",
+        "infoToken": "You need a personal access token with the api permission. You can create one in your GitLab user settings here:",
+        "infoTokenLink": "Preferences → Access tokens",
+        "fieldUrl": "GitLab URL",
+        "fieldVisibility": "Set snippet visibility",
+        "visibility": {
+          "private": "Private",
+          "internal": "Internal",
+          "public": "Public"
+        }
+      },
       "rawHtml": "Raw HTML",
-      "markdown-file": "Markdown file"
+      "markdown-file": "Markdown file",
+      "print": "Print"
     },
     "import": {
       "clipboard": "Clipboard",
@@ -363,6 +400,14 @@
       "lastUpdatedBy": "Last updated by",
       "contributors": "Count of contributors",
       "wordCount": "Count of words"
+    },
+    "mediaBrowser": {
+      "title": "Media",
+      "deleteMedia": "Delete uploaded file",
+      "confirmDeletion": "Do you really want to delete this file?",
+      "errorDeleting": "The uploaded file could not be deleted.",
+      "mediaDeleted": "The uploaded file has been deleted.",
+      "noMediaUploads": "There are no media files uploaded to this note yet"
     },
     "modal": {
       "snippetImport": {
@@ -402,7 +447,9 @@
         "title": "Delete note",
         "question": "Do you really want to delete this note?",
         "warning": "All users will lose their connection. This process is irreversible.",
-        "button": "Delete note"
+        "deleteButton": "Delete note and uploads",
+        "deleteButtonKeepMedia": "Delete note but keep uploads",
+        "keepMedia": "Keep uploads?"
       },
       "permissions": {
         "title": "Permissions",
@@ -520,6 +567,9 @@
     "avatarOf": "Avatar of '{{name}}'",
     "why": "Why?",
     "loading": "Loading ...",
+    "continue": "Continue",
+    "back": "Back",
+    "success": "Success",
     "errorWhileLoading": "An unexpected error occurred while loading '{{name}}'.\nCheck the browser console for more information.\nReport this error only if it comes up again.",
     "errorOccurred": "An error occurred",
     "readForMoreInfo": "Read here for more information",
@@ -566,6 +616,13 @@
         "usernameExisting": "There is already an account with this username.",
         "other": "There was an error while registering your account. Just try it again."
       }
+    },
+    "welcome": {
+      "title": "Welcome, {{name}}!",
+      "titleFallback": "Welcome!",
+      "description": "It seems this is the first time you logged in to this instance. Please confirm your information to continue and login. This needs to be done only once.",
+      "error": "There was an error creating your user account. Please try again.",
+      "cancelError": "There was an error with the process. If this persists, try to clear your cookies, reload and try again."
     }
   },
   "motd": {
@@ -914,6 +971,12 @@
         "description": "Set a equals sign after the language to show line numbers. You can specify a start line number after the equal sign or a plus to continue the line numbers from the last code block.",
         "example": "```markdown=12\nline1\n```\n```markdown=+\nline2\n```\n```markdown=\nline3\n```"
       }
+    }
+  },
+  "print": {
+    "warning": {
+      "title": "Warning!",
+      "text": "To print this note, please use the print button in the export menu in the sidebar. Printing this page directly will not work as expected."
     }
   }
 }

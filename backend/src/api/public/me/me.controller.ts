@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { ApiSecurity, ApiTags } from '@nestjs/swagger';
 
-import { TokenAuthGuard } from '../../../auth/token.strategy';
+import { ApiTokenGuard } from '../../../api-token/api-token.guard';
 import { HistoryEntryUpdateDto } from '../../../history/history-entry-update.dto';
 import { HistoryEntryDto } from '../../../history/history-entry.dto';
 import { HistoryService } from '../../../history/history.service';
@@ -32,7 +32,7 @@ import { OpenApi } from '../../utils/openapi.decorator';
 import { RequestNote } from '../../utils/request-note.decorator';
 import { RequestUser } from '../../utils/request-user.decorator';
 
-@UseGuards(TokenAuthGuard)
+@UseGuards(ApiTokenGuard)
 @OpenApi(401)
 @ApiTags('me')
 @ApiSecurity('token')

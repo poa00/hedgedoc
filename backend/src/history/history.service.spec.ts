@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2024 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -11,7 +11,8 @@ import assert from 'assert';
 import { Mock } from 'ts-mockery';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 
-import { AuthToken } from '../auth/auth-token.entity';
+import { ApiToken } from '../api-token/api-token.entity';
+import { Identity } from '../auth/identity.entity';
 import { Author } from '../authors/author.entity';
 import appConfigMock from '../config/mock/app.config.mock';
 import authConfigMock from '../config/mock/auth.config.mock';
@@ -20,7 +21,6 @@ import noteConfigMock from '../config/mock/note.config.mock';
 import { NotInDBError } from '../errors/errors';
 import { eventModuleConfig } from '../events';
 import { Group } from '../groups/group.entity';
-import { Identity } from '../identity/identity.entity';
 import { LoggerModule } from '../logger/logger.module';
 import { Alias } from '../notes/alias.entity';
 import { Note } from '../notes/note.entity';
@@ -112,7 +112,7 @@ describe('HistoryService', () => {
     })
       .overrideProvider(getRepositoryToken(User))
       .useValue({})
-      .overrideProvider(getRepositoryToken(AuthToken))
+      .overrideProvider(getRepositoryToken(ApiToken))
       .useValue({})
       .overrideProvider(getRepositoryToken(Identity))
       .useValue({})
@@ -393,16 +393,23 @@ describe('HistoryService', () => {
         updatedAt: historyEntryImport.lastVisitedAt,
       };
 
-      const createQueryBuilder = mockSelectQueryBuilderInRepo(noteRepo, note);
+      mockSelectQueryBuilderInRepo(noteRepo, note);
+      const createQueryBuilderForEntityManager = {
+        where: () => createQueryBuilderForEntityManager,
+        getMany: () => [historyEntry],
+      };
+
       const mockedManager = Mock.of<EntityManager>({
-        find: jest.fn().mockResolvedValueOnce([historyEntry]),
-        createQueryBuilder: () => createQueryBuilder,
-        remove: jest.fn().mockImplementationOnce(async (_: HistoryEntry) => {
-          // TODO: reimplement checks below
-          //expect(await (await entry.note).aliases).toHaveLength(1);
-          //expect((await (await entry.note).aliases)[0].name).toEqual(alias);
-          //expect(entry.pinStatus).toEqual(false);
-        }),
+        createQueryBuilder: jest
+          .fn()
+          .mockImplementation(() => createQueryBuilderForEntityManager),
+        remove: jest
+          .fn()
+          .mockImplementationOnce(async (entry: HistoryEntry) => {
+            expect(await (await entry.note).aliases).toHaveLength(1);
+            expect((await (await entry.note).aliases)[0].name).toEqual(alias);
+            expect(entry.pinStatus).toEqual(false);
+          }),
         save: jest.fn().mockImplementationOnce(async (entry: HistoryEntry) => {
           expect((await entry.note).aliases).toEqual(
             (await newlyCreatedHistoryEntry.note).aliases,

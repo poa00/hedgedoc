@@ -1,5 +1,5 @@
 /*!
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file) & Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+ * SPDX-FileCopyrightText: 2024 The HedgeDoc developers (see AUTHORS file) & Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -10,7 +10,6 @@
   line-height: 1.5;
   font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji;
   font-size: 16px;
-  line-height: 1.5;
   word-wrap: break-word;
 
   .octicon {
@@ -89,7 +88,6 @@
   }
 
   strong {
-    font-weight: inherit;
     font-weight: bolder;
   }
 
@@ -107,12 +105,6 @@
   pre {
     font-family: monospace, monospace;
     font-size: 1em;
-  }
-
-  hr {
-    box-sizing: initial;
-    height: 0;
-    overflow: visible;
   }
 
   input {
@@ -142,10 +134,11 @@
   a {
     color: #0366d6;
     text-decoration: none;
+    border-bottom: solid 1px;
   }
 
   a:hover {
-    text-decoration: underline;
+    border-bottom: dashed 1px;
   }
 
   strong {
@@ -174,6 +167,7 @@
   table {
     border-spacing: 0;
     border-collapse: collapse;
+    word-break: keep-all;
   }
 
   td,
@@ -592,19 +586,6 @@
     border-bottom-color: #eee;
   }
 
-  kbd {
-    display: inline-block;
-    padding: 3px 5px;
-    font: 11px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
-    line-height: 10px;
-    color: #444d56;
-    vertical-align: middle;
-    background-color: #fafbfc;
-    border: 1px solid #d1d5da;
-    border-radius: 3px;
-    box-shadow: inset 0 -1px 0 #d1d5da;
-  }
-
   .markdown-body:after,
   .markdown-body:before {
     display: table;
@@ -667,7 +648,7 @@
   h4,
   h5,
   h6 {
-    body.dark &, & {
+    body[data-bs-theme=dark] &, & {
       margin-top: 24px;
       margin-bottom: 16px;
       font-weight: 600;
@@ -676,7 +657,7 @@
   }
 
   h1 {
-    body.dark &, & {
+    body[data-bs-theme=dark] &, & {
       font-size: 2em;
     }
   }
@@ -688,35 +669,35 @@
   }
 
   h2 {
-    body.dark &, & {
+    body[data-bs-theme=dark] &, & {
       font-size: 1.5em;
     }
   }
 
   h3 {
-    body.dark &, & {
+    body[data-bs-theme=dark] &, & {
       font-size: 1.25em;
     }
   }
 
   h4 {
-    body.dark &, & {
+    body[data-bs-theme=dark] &, & {
       font-size: 1em;
     }
   }
 
   h5 {
-    body.dark &, & {
+    body[data-bs-theme=dark] &, & {
       font-size: .875em;
     }
   }
 
   h6 {
-    body.dark &, & {
+    body[data-bs-theme=dark] &, & {
       font-size: .85em;
     }
 
-    body.dark & {
+    body[data-bs-theme=dark] & {
       color: #b4c7d5;
     }
   }
@@ -735,7 +716,7 @@
   }
 
   li {
-    word-wrap: break-all;
+    word-wrap: break-word;
   }
 
   li > p {
@@ -839,7 +820,6 @@
 
   pre code {
     display: inline;
-    max-width: auto;
     padding: 0;
     margin: 0;
     overflow: visible;

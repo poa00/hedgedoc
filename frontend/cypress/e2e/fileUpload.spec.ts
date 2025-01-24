@@ -1,10 +1,9 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2024 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
-
-const imageUrl = 'http://example.com/non-existing.png'
+const fakeUuid = '77fdcf1c-35fa-4a65-bdcf-1c35fa8a65d5'
 
 describe('File upload', () => {
   beforeEach(() => {
@@ -22,7 +21,8 @@ describe('File upload', () => {
         {
           statusCode: 201,
           body: {
-            url: imageUrl
+            uuid: fakeUuid,
+            fileName: 'demo.png'
           }
         }
       )
@@ -38,7 +38,7 @@ describe('File upload', () => {
         },
         { force: true }
       )
-      cy.get('.cm-line').contains(`![demo.png](${imageUrl})`)
+      cy.get('.cm-line').contains(`![demo.png](http://127.0.0.1:3001/media/${fakeUuid})`)
     })
 
     it('via paste', () => {
@@ -51,7 +51,7 @@ describe('File upload', () => {
           }
         }
         cy.get('.cm-content').trigger('paste', pasteEvent)
-        cy.get('.cm-line').contains(`![](${imageUrl})`)
+        cy.get('.cm-line').contains(`![](http://127.0.0.1:3001/media/${fakeUuid})`)
       })
     })
 
@@ -65,31 +65,64 @@ describe('File upload', () => {
         },
         { action: 'drag-drop', force: true }
       )
-      cy.get('.cm-line').contains(`![demo.png](${imageUrl})`)
+      cy.get('.cm-line').contains(`![demo.png](http://127.0.0.1:3001/media/${fakeUuid})`)
     })
   })
 
-  it('fails', () => {
-    cy.getByCypressId('editor-pane').should('have.attr', 'data-cypress-editor-ready', 'true')
-    cy.intercept(
-      {
-        method: 'POST',
-        url: '/api/private/media'
-      },
-      {
-        statusCode: 400
-      }
-    )
-    cy.getByCypressId('toolbar.uploadImage').should('be.visible')
-    cy.getByCypressId('toolbar.uploadImage.input').selectFile(
-      {
-        contents: '@demoImage',
-        fileName: 'demo.png',
-        mimeType: 'image/png'
-      },
-      { force: true }
-    )
-    cy.get('.cm-line').contains('![upload of demo.png failed]()')
+  describe('fails', () => {
+    it('with 400 - generic error', () => {
+      cy.getByCypressId('editor-pane').should('have.attr', 'data-cypress-editor-ready', 'true')
+      cy.intercept(
+        {
+          method: 'POST',
+          url: '/api/private/media'
+        },
+        {
+          statusCode: 400
+        }
+      )
+      cy.getByCypressId('toolbar.uploadImage').should('be.visible')
+      cy.getByCypressId('toolbar.uploadImage.input').selectFile(
+        {
+          contents: '@demoImage',
+          fileName: 'demo.png',
+          mimeType: 'image/png'
+        },
+        { force: true }
+      )
+      cy.get('.cm-line')
+        .should(($el) => {
+          expect($el.text().trim()).equal('')
+        })
+      cy.getByCypressId('notification-toast').should('be.visible')
+    })
+
+    it('with 413 - file size error', () => {
+      cy.getByCypressId('editor-pane').should('have.attr', 'data-cypress-editor-ready', 'true')
+      cy.intercept(
+        {
+          method: 'POST',
+          url: '/api/private/media'
+        },
+        {
+          statusCode: 413
+        }
+      )
+      cy.getByCypressId('toolbar.uploadImage').should('be.visible')
+      cy.getByCypressId('toolbar.uploadImage.input').selectFile(
+        {
+          contents: '@demoImage',
+          fileName: 'demo.png',
+          mimeType: 'image/png'
+        },
+        { force: true }
+      )
+      cy.get('.cm-line')
+        .should(($el) => {
+          expect($el.text().trim()).equal('')
+        })
+      cy.getByCypressId('notification-toast').should('be.visible')
+    })
   })
 
   it('lets text paste still work', () => {

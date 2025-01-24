@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2024 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -15,6 +15,8 @@ import type { CursorSelection } from '../tool-bar/formatters/types/cursor-select
 import type { EditorView } from '@codemirror/view'
 import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useBaseUrl } from '../../../../hooks/common/use-base-url'
+import type { ApiError } from 'next/dist/server/api-utils'
 
 /**
  * @param view the codemirror instance that is used to insert the Markdown code
@@ -37,6 +39,7 @@ type handleUploadSignature = (
 export const useHandleUpload = (): handleUploadSignature => {
   const { t } = useTranslation()
   const { showErrorNotification } = useUiNotifications()
+  const baseUrl = useBaseUrl()
 
   return useCallback(
     (view, file, cursorSelection, description, additionalUrlText) => {
@@ -58,22 +61,26 @@ export const useHandleUpload = (): handleUploadSignature => {
         return replaceSelection(cursorSelection ?? currentSelection, uploadPlaceholder, false)
       })
       uploadFile(noteId, file)
-        .then(({ url }) => {
-          const replacement = `![${description ?? file.name ?? ''}](${url}${additionalUrlText ?? ''})`
+        .then(({ uuid }) => {
+          const fullUrl = `${baseUrl}media/${uuid}`
+          const replacement = `![${description ?? file.name ?? ''}](${fullUrl}${additionalUrlText ?? ''})`
           changeContent(({ markdownContent }) => [
             replaceInContent(markdownContent, uploadPlaceholder, replacement),
             undefined
           ])
         })
-        .catch((error: Error) => {
-          showErrorNotification('editor.upload.failed', { fileName: file.name })(error)
-          const replacement = `![upload of ${file.name} failed]()`
+        .catch((error: ApiError) => {
+          if (error.statusCode === 413) {
+            showErrorNotification('editor.upload.failed_size_too_large', { fileName: file.name })(error)
+          } else {
+            showErrorNotification('editor.upload.failed', { fileName: file.name })(error)
+          }
           changeContent(({ markdownContent }) => [
-            replaceInContent(markdownContent, uploadPlaceholder, replacement),
+            replaceInContent(markdownContent, uploadPlaceholder, '\n'),
             undefined
           ])
         })
     },
-    [showErrorNotification, t]
+    [showErrorNotification, t, baseUrl]
   )
 }

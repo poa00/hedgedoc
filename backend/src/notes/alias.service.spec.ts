@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2024 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -10,7 +10,8 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Mock } from 'ts-mockery';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 
-import { AuthToken } from '../auth/auth-token.entity';
+import { ApiToken } from '../api-token/api-token.entity';
+import { Identity } from '../auth/identity.entity';
 import { Author } from '../authors/author.entity';
 import appConfigMock from '../config/mock/app.config.mock';
 import authConfigMock from '../config/mock/auth.config.mock';
@@ -25,7 +26,6 @@ import {
 import { eventModuleConfig } from '../events';
 import { Group } from '../groups/group.entity';
 import { GroupsModule } from '../groups/groups.module';
-import { Identity } from '../identity/identity.entity';
 import { LoggerModule } from '../logger/logger.module';
 import { NoteGroupPermission } from '../permissions/note-group-permission.entity';
 import { NoteUserPermission } from '../permissions/note-user-permission.entity';
@@ -60,6 +60,16 @@ describe('AliasService', () => {
       ),
       undefined,
     );
+    aliasRepo = new Repository<Alias>(
+      '',
+      new EntityManager(
+        new DataSource({
+          type: 'sqlite',
+          database: ':memory:',
+        }),
+      ),
+      undefined,
+    );
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AliasService,
@@ -70,7 +80,7 @@ describe('AliasService', () => {
         },
         {
           provide: getRepositoryToken(Alias),
-          useClass: Repository,
+          useValue: aliasRepo,
         },
         {
           provide: getRepositoryToken(Tag),
@@ -105,10 +115,10 @@ describe('AliasService', () => {
       .overrideProvider(getRepositoryToken(Tag))
       .useClass(Repository)
       .overrideProvider(getRepositoryToken(Alias))
-      .useClass(Repository)
+      .useValue(aliasRepo)
       .overrideProvider(getRepositoryToken(User))
       .useClass(Repository)
-      .overrideProvider(getRepositoryToken(AuthToken))
+      .overrideProvider(getRepositoryToken(ApiToken))
       .useValue({})
       .overrideProvider(getRepositoryToken(Identity))
       .useValue({})
@@ -144,8 +154,8 @@ describe('AliasService', () => {
         jest
           .spyOn(noteRepo, 'save')
           .mockImplementationOnce(async (note: Note): Promise<Note> => note);
-        jest.spyOn(noteRepo, 'findOne').mockResolvedValueOnce(null);
-        jest.spyOn(aliasRepo, 'findOne').mockResolvedValueOnce(null);
+        jest.spyOn(noteRepo, 'existsBy').mockResolvedValueOnce(false);
+        jest.spyOn(aliasRepo, 'existsBy').mockResolvedValueOnce(false);
         const savedAlias = await service.addAlias(note, alias);
         expect(savedAlias.name).toEqual(alias);
         expect(savedAlias.primary).toBeTruthy();
@@ -155,8 +165,8 @@ describe('AliasService', () => {
         jest
           .spyOn(noteRepo, 'save')
           .mockImplementationOnce(async (note: Note): Promise<Note> => note);
-        jest.spyOn(noteRepo, 'findOne').mockResolvedValueOnce(null);
-        jest.spyOn(aliasRepo, 'findOne').mockResolvedValueOnce(null);
+        jest.spyOn(noteRepo, 'existsBy').mockResolvedValueOnce(false);
+        jest.spyOn(aliasRepo, 'existsBy').mockResolvedValueOnce(false);
         const savedAlias = await service.addAlias(note, alias2);
         expect(savedAlias.name).toEqual(alias2);
         expect(savedAlias.primary).toBeFalsy();
@@ -165,9 +175,8 @@ describe('AliasService', () => {
     describe('does not create an alias', () => {
       const note = Note.create(user, alias2) as Note;
       it('with an already used name', async () => {
-        jest
-          .spyOn(aliasRepo, 'findOne')
-          .mockResolvedValueOnce(Alias.create(alias2, note, false) as Alias);
+        jest.spyOn(noteRepo, 'existsBy').mockResolvedValueOnce(false);
+        jest.spyOn(aliasRepo, 'existsBy').mockResolvedValueOnce(true);
         await expect(service.addAlias(note, alias2)).rejects.toThrow(
           AlreadyInDBError,
         );
@@ -254,7 +263,7 @@ describe('AliasService', () => {
 
     it('mark the alias as primary', async () => {
       jest
-        .spyOn(aliasRepo, 'findOneBy')
+        .spyOn(aliasRepo, 'findOneByOrFail')
         .mockResolvedValueOnce(alias)
         .mockResolvedValueOnce(alias2);
       jest

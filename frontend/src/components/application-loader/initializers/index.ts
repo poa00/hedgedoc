@@ -8,7 +8,7 @@ import { Logger } from '../../../utils/logger'
 import { isDevMode, isTestMode } from '../../../utils/test-modes'
 import { loadDarkMode } from './load-dark-mode'
 import { setUpI18n } from './setupI18n'
-import { loadFromLocalStorage } from '../../../redux/editor/methods'
+import { loadFromLocalStorage } from '../../../redux/editor-config/methods'
 import { fetchAndSetUser } from '../../login-page/utils/fetch-and-set-user'
 
 const logger = new Logger('Application Loader')
@@ -44,7 +44,7 @@ export interface InitTask {
 const fetchUserInformation = async (): Promise<void> => {
   try {
     await fetchAndSetUser()
-  } catch (error) {
+  } catch {
     logger.error("Couldn't load user. Probably not logged in.")
   }
 }

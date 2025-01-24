@@ -10,7 +10,7 @@
 #    DOCKER_BUILDKIT=1 docker build -f docker/Dockerfile .
 
 ## Stage 0: Base image with only yarn and package.json
-FROM docker.io/node:20-alpine@sha256:2f46fd49c767554c089a5eb219115313b72748d8f62f5eccb58ef52bc36db4ad as base
+FROM docker.io/node:20-alpine@sha256:d20da4a7c62a5ef7a3ca2526ebb0912e8c9226a870e0167b4416eb4d3bbda27e as base
 # Add tini to handle signals
 # https://github.com/nodejs/docker-node/blob/main/docs/BestPractices.md#handling-kernel-signals
 RUN apk add --no-cache tini
@@ -40,7 +40,7 @@ ARG TURBO_TEAM
 ARG TURBO_API
 ARG TURBO_TOKEN
 
-RUN yarn build --filter=backend --no-cache --no-daemon
+RUN yarn build --filter=@hedgedoc/backend --no-cache --no-daemon
 
 ## Stage 2b: Install only prod dependencies
 FROM code-with-deps as prod-dependencies
@@ -56,7 +56,7 @@ FROM base as prod
 LABEL org.opencontainers.image.title='HedgeDoc production backend image'
 LABEL org.opencontainers.image.url='https://hedgedoc.org'
 LABEL org.opencontainers.image.source='https://github.com/hedgedoc/hedgedoc'
-LABEL org.opencontainers.image.documentation='https://github.com/hedgedoc/hedgedoc/blob/develop/docs/content/dev/docker.md'
+LABEL org.opencontainers.image.documentation='https://github.com/hedgedoc/hedgedoc/blob/develop/docs/content/how-to/develop/docker.md'
 LABEL org.opencontainers.image.licenses='AGPL-3.0'
 
 USER node

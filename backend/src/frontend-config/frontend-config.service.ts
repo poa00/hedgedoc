@@ -1,11 +1,12 @@
 /*
- * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2024 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import { Inject, Injectable } from '@nestjs/common';
 import { URL } from 'url';
 
+import { ProviderType } from '../auth/provider-type.enum';
 import appConfiguration, { AppConfig } from '../config/app.config';
 import authConfiguration, { AuthConfig } from '../config/auth.config';
 import customizationConfiguration, {
@@ -19,7 +20,6 @@ import { ConsoleLoggerService } from '../logger/console-logger.service';
 import { getServerVersionFromPackageJson } from '../utils/serverVersion';
 import {
   AuthProviderDto,
-  AuthProviderType,
   BrandingDto,
   FrontendConfigDto,
   SpecialUrlsDto,
@@ -47,6 +47,8 @@ export class FrontendConfigService {
     return {
       guestAccess: this.noteConfig.guestAccess,
       allowRegister: this.authConfig.local.enableRegister,
+      allowProfileEdits: this.authConfig.common.allowProfileEdits,
+      allowChooseUsername: this.authConfig.common.allowChooseUsername,
       authProviders: this.getAuthProviders(),
       branding: this.getBranding(),
       maxDocumentLength: this.noteConfig.maxDocumentLength,
@@ -63,45 +65,22 @@ export class FrontendConfigService {
     const providers: AuthProviderDto[] = [];
     if (this.authConfig.local.enableLogin) {
       providers.push({
-        type: AuthProviderType.LOCAL,
+        type: ProviderType.LOCAL,
       });
     }
-    if (this.authConfig.github.clientID) {
-      providers.push({
-        type: AuthProviderType.GITHUB,
-      });
-    }
-    if (this.authConfig.google.clientID) {
-      providers.push({
-        type: AuthProviderType.GOOGLE,
-      });
-    }
-    this.authConfig.gitlab.forEach((gitLabEntry) => {
-      providers.push({
-        type: AuthProviderType.GITLAB,
-        providerName: gitLabEntry.providerName,
-        identifier: gitLabEntry.identifier,
-      });
-    });
     this.authConfig.ldap.forEach((ldapEntry) => {
       providers.push({
-        type: AuthProviderType.LDAP,
+        type: ProviderType.LDAP,
         providerName: ldapEntry.providerName,
         identifier: ldapEntry.identifier,
       });
     });
-    this.authConfig.oauth2.forEach((oauth2Entry) => {
+    this.authConfig.oidc.forEach((openidConnectEntry) => {
       providers.push({
-        type: AuthProviderType.OAUTH2,
-        providerName: oauth2Entry.providerName,
-        identifier: oauth2Entry.identifier,
-      });
-    });
-    this.authConfig.saml.forEach((samlEntry) => {
-      providers.push({
-        type: AuthProviderType.SAML,
-        providerName: samlEntry.providerName,
-        identifier: samlEntry.identifier,
+        type: ProviderType.OIDC,
+        providerName: openidConnectEntry.providerName,
+        identifier: openidConnectEntry.identifier,
+        theme: openidConnectEntry.theme,
       });
     });
     return providers;

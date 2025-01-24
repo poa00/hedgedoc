@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2024 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -25,7 +25,7 @@ describe('Notes', () => {
   let agent: request.SuperAgentTest;
 
   beforeAll(async () => {
-    testSetup = await TestSetupBuilder.create().build();
+    testSetup = await TestSetupBuilder.create().withNotes().build();
 
     forbiddenNoteId =
       testSetup.configService.get('noteConfig').forbiddenNoteIds[0];
@@ -40,9 +40,9 @@ describe('Notes', () => {
     const groupname1 = 'groupname1';
 
     user1 = await testSetup.userService.createUser(username1, 'Testy');
-    await testSetup.identityService.createLocalIdentity(user1, password1);
+    await testSetup.localIdentityService.createLocalIdentity(user1, password1);
     user2 = await testSetup.userService.createUser(username2, 'Max Mustermann');
-    await testSetup.identityService.createLocalIdentity(user2, password2);
+    await testSetup.localIdentityService.createLocalIdentity(user2, password2);
 
     group1 = await testSetup.groupService.createGroup(groupname1, 'Group 1');
 
@@ -139,11 +139,20 @@ describe('Notes', () => {
           .maxDocumentLength as number) + 1,
       );
       await agent
-        .post('/api/private/notes/test2')
+        .post('/api/private/notes/test3')
         .set('Content-Type', 'text/markdown')
         .send(content)
         .expect('Content-Type', /json/)
         .expect(413);
+    });
+
+    it('cannot create an alias equal to a note publicId', async () => {
+      await agent
+        .post(`/api/private/notes/${testSetup.anonymousNotes[0].publicId}`)
+        .set('Content-Type', 'text/markdown')
+        .send(content)
+        .expect('Content-Type', /json/)
+        .expect(409);
     });
   });
 
@@ -156,7 +165,12 @@ describe('Notes', () => {
           user1,
           noteId,
         );
-        await testSetup.mediaService.saveFile(testImage, user1, note);
+        await testSetup.mediaService.saveFile(
+          'test.png',
+          testImage,
+          user1,
+          note,
+        );
         await agent
           .delete(`/api/private/notes/${noteId}`)
           .set('Content-Type', 'application/json')
@@ -182,6 +196,7 @@ describe('Notes', () => {
           noteId,
         );
         const upload = await testSetup.mediaService.saveFile(
+          'test.png',
           testImage,
           user1,
           note,
@@ -201,10 +216,8 @@ describe('Notes', () => {
         expect(
           await testSetup.mediaService.listUploadsByUser(user1),
         ).toHaveLength(1);
-        // Remove /upload/ from path as we just need the filename.
-        const fileName = upload.fileUrl.replace('/uploads/', '');
         // delete the file afterwards
-        await fs.unlink(join(uploadPath, fileName));
+        await fs.unlink(join(uploadPath, upload.uuid + '.png'));
         await fs.rmdir(uploadPath);
       });
     });
@@ -397,11 +410,13 @@ describe('Notes', () => {
 
       const testImage = await fs.readFile('test/private-api/fixtures/test.png');
       const upload0 = await testSetup.mediaService.saveFile(
+        'test.png',
         testImage,
         user1,
         note1,
       );
       const upload1 = await testSetup.mediaService.saveFile(
+        'test.png',
         testImage,
         user1,
         note2,
@@ -412,12 +427,11 @@ describe('Notes', () => {
         .expect('Content-Type', /json/)
         .expect(200);
       expect(responseAfter.body).toHaveLength(1);
-      expect(responseAfter.body[0].url).toEqual(upload0.fileUrl);
-      expect(responseAfter.body[0].url).not.toEqual(upload1.fileUrl);
+      expect(responseAfter.body[0].uuid).toEqual(upload0.uuid);
+      expect(responseAfter.body[0].uuid).not.toEqual(upload1.uuid);
       for (const upload of [upload0, upload1]) {
-        const fileName = upload.fileUrl.replace('/uploads/', '');
         // delete the file afterwards
-        await fs.unlink(join(uploadPath, fileName));
+        await fs.unlink(join(uploadPath, upload.uuid + '.png'));
       }
       await fs.rm(uploadPath, { recursive: true });
     });

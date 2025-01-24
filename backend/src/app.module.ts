@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2024 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -10,6 +10,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { ApiTokenModule } from './api-token/api-token.module';
 import { PrivateApiModule } from './api/private/private-api.module';
 import { PublicApiModule } from './api/public/public-api.module';
 import { AuthModule } from './auth/auth.module';
@@ -27,9 +28,9 @@ import { FrontendConfigModule } from './frontend-config/frontend-config.module';
 import { FrontendConfigService } from './frontend-config/frontend-config.service';
 import { GroupsModule } from './groups/groups.module';
 import { HistoryModule } from './history/history.module';
-import { IdentityModule } from './identity/identity.module';
 import { LoggerModule } from './logger/logger.module';
 import { TypeormLoggerService } from './logger/typeorm-logger.service';
+import { MediaRedirectModule } from './media-redirect/media-redirect.module';
 import { MediaModule } from './media/media.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
 import { NotesModule } from './notes/notes.module';
@@ -48,6 +49,10 @@ const routes: Routes = [
   {
     path: '/api/private',
     module: PrivateApiModule,
+  },
+  {
+    path: '/media',
+    module: MediaRedirectModule,
   },
 ];
 
@@ -107,11 +112,12 @@ const routes: Routes = [
     GroupsModule,
     LoggerModule,
     MediaModule,
-    AuthModule,
+    ApiTokenModule,
     FrontendConfigModule,
     WebsocketModule,
-    IdentityModule,
+    AuthModule,
     SessionModule,
+    MediaRedirectModule,
   ],
   controllers: [],
   providers: [FrontendConfigService],

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2024 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -11,14 +11,19 @@ import { Test, TestingModule, TestingModuleBuilder } from '@nestjs/testing';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { Connection, createConnection } from 'typeorm';
 
+import { ApiTokenWithSecretDto } from '../src/api-token/api-token.dto';
+import { ApiTokenGuard } from '../src/api-token/api-token.guard';
+import { ApiTokenModule } from '../src/api-token/api-token.module';
+import { ApiTokenService } from '../src/api-token/api-token.service';
+import { MockApiTokenGuard } from '../src/api-token/mock-api-token.guard';
 import { PrivateApiModule } from '../src/api/private/private-api.module';
 import { PublicApiModule } from '../src/api/public/public-api.module';
 import { setupApp } from '../src/app-init';
-import { AuthTokenWithSecretDto } from '../src/auth/auth-token.dto';
 import { AuthModule } from '../src/auth/auth.module';
-import { AuthService } from '../src/auth/auth.service';
-import { MockAuthGuard } from '../src/auth/mock-auth.guard';
-import { TokenAuthGuard } from '../src/auth/token.strategy';
+import { IdentityService } from '../src/auth/identity.service';
+import { LdapService } from '../src/auth/ldap/ldap.service';
+import { LocalService } from '../src/auth/local/local.service';
+import { OidcService } from '../src/auth/oidc/oidc.service';
 import { AuthorsModule } from '../src/authors/authors.module';
 import { AppConfig } from '../src/config/app.config';
 import { AuthConfig } from '../src/config/auth.config';
@@ -62,8 +67,6 @@ import { GroupsModule } from '../src/groups/groups.module';
 import { GroupsService } from '../src/groups/groups.service';
 import { HistoryModule } from '../src/history/history.module';
 import { HistoryService } from '../src/history/history.service';
-import { IdentityModule } from '../src/identity/identity.module';
-import { IdentityService } from '../src/identity/identity.service';
 import { ConsoleLoggerService } from '../src/logger/console-logger.service';
 import { LoggerModule } from '../src/logger/logger.module';
 import { MediaModule } from '../src/media/media.module';
@@ -101,16 +104,19 @@ export class TestSetup {
   groupService: GroupsService;
   configService: ConfigService;
   identityService: IdentityService;
+  localIdentityService: LocalService;
+  ldapService: LdapService;
+  oidcService: OidcService;
   notesService: NotesService;
   mediaService: MediaService;
   historyService: HistoryService;
   aliasService: AliasService;
-  authService: AuthService;
+  publicAuthTokenService: ApiTokenService;
   sessionService: SessionService;
   revisionsService: RevisionsService;
 
   users: User[] = [];
-  authTokens: AuthTokenWithSecretDto[] = [];
+  authTokens: ApiTokenWithSecretDto[] = [];
   anonymousNotes: Note[] = [];
   ownedNotes: Note[] = [];
   permissionsService: PermissionsService;
@@ -288,9 +294,9 @@ export class TestSetupBuilder {
         GroupsModule,
         LoggerModule,
         MediaModule,
-        AuthModule,
+        ApiTokenModule,
         FrontendConfigModule,
-        IdentityModule,
+        AuthModule,
         SessionModule,
         EventEmitterModule.forRoot(eventModuleConfig),
       ],
@@ -324,6 +330,8 @@ export class TestSetupBuilder {
       this.testSetup.moduleRef.get<ConfigService>(ConfigService);
     this.testSetup.identityService =
       this.testSetup.moduleRef.get<IdentityService>(IdentityService);
+    this.testSetup.localIdentityService =
+      this.testSetup.moduleRef.get<LocalService>(LocalService);
     this.testSetup.notesService =
       this.testSetup.moduleRef.get<NotesService>(NotesService);
     this.testSetup.mediaService =
@@ -332,14 +340,18 @@ export class TestSetupBuilder {
       this.testSetup.moduleRef.get<HistoryService>(HistoryService);
     this.testSetup.aliasService =
       this.testSetup.moduleRef.get<AliasService>(AliasService);
-    this.testSetup.authService =
-      this.testSetup.moduleRef.get<AuthService>(AuthService);
+    this.testSetup.publicAuthTokenService =
+      this.testSetup.moduleRef.get<ApiTokenService>(ApiTokenService);
     this.testSetup.permissionsService =
       this.testSetup.moduleRef.get<PermissionsService>(PermissionsService);
     this.testSetup.sessionService =
       this.testSetup.moduleRef.get<SessionService>(SessionService);
     this.testSetup.revisionsService =
       this.testSetup.moduleRef.get<RevisionsService>(RevisionsService);
+    this.testSetup.ldapService =
+      this.testSetup.moduleRef.get<LdapService>(LdapService);
+    this.testSetup.oidcService =
+      this.testSetup.moduleRef.get<OidcService>(OidcService);
 
     this.testSetup.app = this.testSetup.moduleRef.createNestApplication();
 
@@ -363,8 +375,8 @@ export class TestSetupBuilder {
   public withMockAuth() {
     this.setupPreCompile.push(async () => {
       this.testingModuleBuilder
-        .overrideGuard(TokenAuthGuard)
-        .useClass(MockAuthGuard);
+        .overrideGuard(ApiTokenGuard)
+        .useClass(MockApiTokenGuard);
       return await Promise.resolve();
     });
     return this;
@@ -387,15 +399,15 @@ export class TestSetupBuilder {
       );
 
       // Create identities for login
-      await this.testSetup.identityService.createLocalIdentity(
+      await this.testSetup.localIdentityService.createLocalIdentity(
         this.testSetup.users[0],
         password1,
       );
-      await this.testSetup.identityService.createLocalIdentity(
+      await this.testSetup.localIdentityService.createLocalIdentity(
         this.testSetup.users[1],
         password2,
       );
-      await this.testSetup.identityService.createLocalIdentity(
+      await this.testSetup.localIdentityService.createLocalIdentity(
         this.testSetup.users[2],
         password3,
       );
@@ -403,7 +415,7 @@ export class TestSetupBuilder {
       // create auth tokens
       this.testSetup.authTokens = await Promise.all(
         this.testSetup.users.map(async (user) => {
-          return await this.testSetup.authService.addToken(
+          return await this.testSetup.publicAuthTokenService.addToken(
             user,
             'test',
             new Date().getTime() + 60 * 60 * 1000,

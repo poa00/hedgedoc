@@ -1,15 +1,16 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2024 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
-import { getUser } from '../../../api/users'
+import { getUserInfo } from '../../../api/users'
 import { AsyncLoadingBoundary } from '../async-loading-boundary/async-loading-boundary'
 import type { UserAvatarProps } from './user-avatar'
 import { UserAvatar } from './user-avatar'
-import React, { Fragment, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAsync } from 'react-use'
+import type { UserInfo } from '../../../api/users/types'
 
 export interface UserAvatarForUsernameProps extends Omit<UserAvatarProps, 'photoUrl' | 'displayName'> {
   username: string | null
@@ -26,17 +27,21 @@ export interface UserAvatarForUsernameProps extends Omit<UserAvatarProps, 'photo
  */
 export const UserAvatarForUsername: React.FC<UserAvatarForUsernameProps> = ({ username, ...props }) => {
   const { t } = useTranslation()
-  const { error, value, loading } = useAsync(async (): Promise<{ displayName: string; photo?: string }> => {
+  const { error, value, loading } = useAsync(async (): Promise<UserInfo> => {
     return username
-      ? await getUser(username)
+      ? await getUserInfo(username)
       : {
-          displayName: t('common.guestUser')
+          displayName: t('common.guestUser'),
+          username: ''
         }
   }, [username, t])
 
   const avatar = useMemo(() => {
-    return !value ? <Fragment /> : <UserAvatar displayName={value.displayName} photoUrl={value.photo} {...props} />
-  }, [props, value])
+    if (!value) {
+      return null
+    }
+    return <UserAvatar displayName={value.displayName} photoUrl={value.photoUrl} username={username} {...props} />
+  }, [props, value, username])
 
   return (
     <AsyncLoadingBoundary loading={loading || !value} error={error} componentName={'UserAvatarForUsername'}>

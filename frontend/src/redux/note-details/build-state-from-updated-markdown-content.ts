@@ -5,7 +5,7 @@
  */
 import { calculateLineStartIndexes } from './calculate-line-start-indexes'
 import { initialState } from './initial-state'
-import type { NoteDetails } from './types/note-details'
+import type { NoteDetails } from './types'
 import type { FrontmatterExtractionResult, NoteFrontmatter } from '@hedgedoc/commons'
 import {
   convertRawFrontmatterToNoteFrontmatter,
@@ -83,6 +83,10 @@ const buildStateFromFrontmatterUpdate = (
   state: NoteDetails,
   frontmatterExtraction: FrontmatterExtractionResult
 ): NoteDetails => {
+  if (frontmatterExtraction.incomplete) {
+    frontmatterExtraction.rawText = state.rawFrontmatter
+    return buildStateFromFrontmatter(state, parseFrontmatter(frontmatterExtraction), frontmatterExtraction)
+  }
   if (frontmatterExtraction.rawText === state.rawFrontmatter) {
     return state
   }

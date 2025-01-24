@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2024 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -33,7 +33,7 @@ describe('Me', () => {
     await testSetup.app.init();
 
     user = await testSetup.userService.createUser(username, 'Testy');
-    await testSetup.identityService.createLocalIdentity(user, password);
+    await testSetup.localIdentityService.createLocalIdentity(user, password);
 
     content = 'This is a test note.';
     alias2 = 'note2';
@@ -68,18 +68,46 @@ describe('Me', () => {
     expect(responseBefore.body).toHaveLength(0);
 
     const testImage = await fs.readFile('test/public-api/fixtures/test.png');
-    const imageUrls = [];
-    imageUrls.push(
-      (await testSetup.mediaService.saveFile(testImage, user, note1)).fileUrl,
+    const imageIds = [];
+    imageIds.push(
+      (
+        await testSetup.mediaService.saveFile(
+          'test.png',
+          testImage,
+          user,
+          note1,
+        )
+      ).uuid,
     );
-    imageUrls.push(
-      (await testSetup.mediaService.saveFile(testImage, user, note1)).fileUrl,
+    imageIds.push(
+      (
+        await testSetup.mediaService.saveFile(
+          'test.png',
+          testImage,
+          user,
+          note1,
+        )
+      ).uuid,
     );
-    imageUrls.push(
-      (await testSetup.mediaService.saveFile(testImage, user, note2)).fileUrl,
+    imageIds.push(
+      (
+        await testSetup.mediaService.saveFile(
+          'test.png',
+          testImage,
+          user,
+          note2,
+        )
+      ).uuid,
     );
-    imageUrls.push(
-      (await testSetup.mediaService.saveFile(testImage, user, note2)).fileUrl,
+    imageIds.push(
+      (
+        await testSetup.mediaService.saveFile(
+          'test.png',
+          testImage,
+          user,
+          note2,
+        )
+      ).uuid,
     );
 
     const response = await agent
@@ -87,10 +115,10 @@ describe('Me', () => {
       .expect('Content-Type', /json/)
       .expect(200);
     expect(response.body).toHaveLength(4);
-    expect(imageUrls).toContain(response.body[0].url);
-    expect(imageUrls).toContain(response.body[1].url);
-    expect(imageUrls).toContain(response.body[2].url);
-    expect(imageUrls).toContain(response.body[3].url);
+    expect(imageIds).toContain(response.body[0].uuid);
+    expect(imageIds).toContain(response.body[1].uuid);
+    expect(imageIds).toContain(response.body[2].uuid);
+    expect(imageIds).toContain(response.body[3].uuid);
     const mediaUploads = await testSetup.mediaService.listUploadsByUser(user);
     for (const upload of mediaUploads) {
       await testSetup.mediaService.deleteFile(upload);
@@ -114,6 +142,7 @@ describe('Me', () => {
   it('DELETE /me', async () => {
     const testImage = await fs.readFile('test/public-api/fixtures/test.png');
     const upload = await testSetup.mediaService.saveFile(
+      'test.png',
       testImage,
       user,
       note1,
@@ -122,7 +151,7 @@ describe('Me', () => {
     expect(dbUser).toBeInstanceOf(User);
     const mediaUploads = await testSetup.mediaService.listUploadsByUser(dbUser);
     expect(mediaUploads).toHaveLength(1);
-    expect(mediaUploads[0].fileUrl).toEqual(upload.fileUrl);
+    expect(mediaUploads[0].uuid).toEqual(upload.uuid);
     await agent.delete('/api/private/me').expect(204);
     await expect(
       testSetup.userService.getUserByUsername('hardcoded'),

@@ -1,5 +1,5 @@
-/*
- * SPDX-FileCopyrightText: 2021 The HedgeDoc developers (see AUTHORS file)
+/*!
+ * SPDX-FileCopyrightText: 2024 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -21,6 +21,12 @@
     svg {
       max-width: 100%;
     }
+  }
+
+  // Fixes checkboxes moving to bottom row if task is multiline
+  ul.contains-task-list > li.task-list-item:has(input.task-list-item-checkbox) {
+    display: flex;
+    align-items: baseline;
   }
 
   .alert {
